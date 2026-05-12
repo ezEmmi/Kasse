@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>🍺 Fest-Kasse</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #141008; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const BIER = [
+      { id: "b1", name: "Pils", size: "0,5 L", price: 3.50, emoji: "🍺" },
+      { id: "b2", name: "Radler", size: "0,5 L", price: 3.50, emoji: "🍋" },
+      { id: "b3", name: "Keiler Weizen", size: "0,5 L", price: 3.50, emoji: "🌾" },
+      { id: "b4", name: "Erdinger AF", size: "0,5 L", price: 3.50, emoji: "🥤" },
+      { id: "b5", name: "Weizen", size: "0,5 L", price: 3.50, emoji: "🍺" },
+      { id: "b6", name: "Pils Maß", size: "1,0 L", price: 7.00, emoji: "🍺" },
+      { id: "b7", name: "Radler Maß", size: "1,0 L", price: 7.00, emoji: "🍋" },
+      { id: "b8", name: "Weizen Maß", size: "1,0 L", price: 7.00, emoji: "🌾" },
+    ];
+
+    const ALKOHOLFREI = [
+      { id: "af1", name: "Apfelsaft", size: "0,5 L", price: 3.00, emoji: "🍎" },
+      { id: "af2", name: "Johannisbeere", size: "0,5 L", price: 3.00, emoji: "🫐" },
+      { id: "af3", name: "Zitrolimo", size: "0,5 L", price: 3.00, emoji: "🍋" },
+      { id: "af4", name: "Orangelimo", size: "0,5 L", price: 3.00, emoji: "🍊" },
+      { id: "af5", name: "Spezi", size: "0,5 L", price: 3.00, emoji: "🥤" },
+      { id: "af6", name: "Cola", size: "0,5 L", price: 3.00, emoji: "🥤" },
+      { id: "af7", name: "Wasser", size: "0,5 L", price: 3.00, emoji: "💧" },
+    ];
+
+    const WEIN = [
+      { id: "w1", name: "Schoppen Wein", size: "0,3 L", price: 3.50, emoji: "🍷" },
+      { id: "w2", name: "Weinschorle", size: "0,5 L", price: 5.00, emoji: "🥂" },
+      { id: "w3", name: "Schnäpse", size: "2 cl", price: 1.50, emoji: "🥃" },
+      { id: "w4", name: "Backhaustropfen", size: "0,7 L", price: 30.00, emoji: "🍾" },
+      { id: "w5", name: "Klopfer", size: "Kiste", price: 30.00, emoji: "🎯" },
+    ];
+
+    const SCHNAPS = [
+      { id: "s1", name: "Aperol", size: "0,3 L", price: 5.00, emoji: "🍊" },
+      { id: "s2", name: "Mix + Cola", size: "0,2 L", price: 3.00, emoji: "🥃" },
+      { id: "s3", name: "Mix + Cola", size: "0,5 L", price: 8.00, emoji: "🥃" },
+      { id: "s4", name: "Flasche", size: "0,7 L", price: 40.00, emoji: "🍾" },
+    ];
+
+    const TABS = [
+      { key: "bier", label: "🍺 Bier", items: BIER },
+      { key: "wein", label: "🍷 Wein", items: WEIN },
+      { key: "schnaps", label: "🥃 Schnaps", items: SCHNAPS },
+      { key: "soft", label: "🥤 Soft", items: ALKOHOLFREI },
+    ];
+
+    function Btn({ onClick, children }) {
+      return (
+        <button onClick={onClick} style={{
+          width: 30, height: 30, borderRadius: 6,
+          border: "1px solid rgba(255,255,255,0.2)",
+          background: "rgba(255,255,255,0.07)",
+          color: "#f0ead6", cursor: "pointer",
+          fontSize: 18, fontWeight: 700,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0, lineHeight: 1,
+        }}>
+          {children}
+        </button>
+      );
+    }
+
+    function FestKasse() {
+      const [tab, setTab] = useState("bier");
+      const [cart, setCart] = useState([]);
+      const [pfandBack, setPfandBack] = useState(0);
+      const [paid, setPaid] = useState("");
+      const [showChange, setShowChange] = useState(false);
+
+      const addToCart = (item) => {
+        setCart(prev => {
+          const exists = prev.find(c => c.id === item.id);
+          if (exists) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
+          return [...prev, { ...item, qty: 1 }];
+        });
+      };
+
+      const changeQty = (id, delta) => {
+        setCart(prev =>
+          prev.map(c => c.id === id ? { ...c, qty: c.qty + delta } : c).filter(c => c.qty > 0)
+        );
+      };
+
+      const cartTotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+      const pfandBackTotal = pfandBack * 3.00;
+      const total = Math.max(0, cartTotal - pfandBackTotal);
+      const change = parseFloat(paid) - total;
+
+      const reset = () => {
+        setCart([]); setPfandBack(0); setPaid(""); setShowChange(false);
+      };
+
+      const currentItems = TABS.find(t => t.key === tab)?.items || [];
+
+      return (
+        <div style={{
+          height: "100dvh", display: "flex", flexDirection: "column",
+          background: "#141008", color: "#f0ead6",
+          fontFamily: "system-ui, sans-serif", overflow: "hidden",
+          maxWidth: 480, margin: "0 auto",
+        }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: 1, color: "#f5c842" }}>🍺 FEST-KASSE</div>
+              <button onClick={reset} style={{
+                background: "rgba(255,80,80,0.15)", border: "1px solid rgba(255,80,80,0.3)",
+                borderRadius: 8, color: "#ff7070", padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700,
+              }}>🗑 Reset</button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div style={{ color: "#3a3020", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
+                Noch nix — unten Getränke tippen 👇
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {cart.map(c => (
+                  <div key={c.id} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: "6px 10px",
+                  }}>
+                    <span style={{ fontSize: 16 }}>{c.emoji}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {c.name} <span style={{ color: "#7a7060", fontWeight: 400 }}>{c.size}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#f5c842" }}>{(c.price * c.qty).toFixed(2)} €</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <Btn onClick={() => changeQty(c.id, -1)}>−</Btn>
+                      <span style={{ fontSize: 13, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{c.qty}</span>
+                      <Btn onClick={() => changeQty(c.id, 1)}>+</Btn>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{
+              background: "rgba(245,200,66,0.07)", border: "1px solid rgba(245,200,66,0.2)",
+              borderRadius: 10, padding: "8px 10px",
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#f5c842", letterSpacing: 1, marginBottom: 6 }}>
+                PFAND ZURÜCK (3,00 € / Stück)
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Btn onClick={() => setPfandBack(Math.max(0, pfandBack - 1))}>−</Btn>
+                <span style={{ fontSize: 22, fontWeight: 900, color: "#f5c842", minWidth: 28, textAlign: "center" }}>{pfandBack}</span>
+                <Btn onClick={() => setPfandBack(pfandBack + 1)}>+</Btn>
+                <span style={{ fontSize: 12, color: "#7a7060" }}>Stück</span>
+                {pfandBack > 0 && (
+                  <span style={{ marginLeft: "auto", fontSize: 14, fontWeight: 800, color: "#f5c842" }}>
+                    −{pfandBackTotal.toFixed(2)} €
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{
+              background: "rgba(0,0,0,0.35)", borderRadius: 10, padding: "8px 12px",
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+            }}>
+              <div>
+                {pfandBack > 0 && (
+                  <div style={{ fontSize: 10, color: "#7a7060" }}>
+                    {cartTotal.toFixed(2)} − {pfandBackTotal.toFixed(2)} €
+                  </div>
+                )}
+                <div style={{ fontSize: 26, fontWeight: 900, color: "#f5c842", lineHeight: 1 }}>{total.toFixed(2)} €</div>
+              </div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {[5, 10, 20, 50].map(v => (
+                  <button key={v} onClick={() => { setPaid(String(v)); setShowChange(true); }} style={{
+                    background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 6,
+                    color: "#f0ead6", padding: "5px 9px", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                  }}>{v}€</button>
+                ))}
+                {total > 0 && (
+                  <button onClick={() => { setPaid(total.toFixed(2)); setShowChange(true); }} style={{
+                    background: "#f5c842", border: "none", borderRadius: 6,
+                    color: "#1a1408", padding: "5px 9px", cursor: "pointer", fontSize: 12, fontWeight: 800,
+                  }}>Passend</button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                type="number" inputMode="decimal" placeholder="Gegeben €"
+                value={paid}
+                onChange={e => { setPaid(e.target.value); setShowChange(false); }}
+                style={{
+                  flex: 1, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 8, color: "#f0ead6", fontSize: 20, padding: "8px 12px", fontFamily: "inherit",
+                }}
+              />
+              <button onClick={() => setShowChange(true)} style={{
+                background: "#f5c842", color: "#1a1408", border: "none",
+                borderRadius: 8, padding: "8px 18px", fontWeight: 900, fontSize: 20, cursor: "pointer",
+              }}>✓</button>
+            </div>
+
+            {showChange && paid !== "" && (
+              <div style={{
+                background: change >= 0 ? "rgba(80,200,100,0.12)" : "rgba(255,80,80,0.12)",
+                border: `1px solid ${change >= 0 ? "#50c864" : "#ff5050"}`,
+                borderRadius: 10, padding: "10px", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 11, color: "#a89f88" }}>{change >= 0 ? "Rückgeld" : "⚠ Zu wenig!"}</div>
+                <div style={{ fontSize: 32, fontWeight: 900, color: change >= 0 ? "#50c864" : "#ff5050" }}>
+                  {Math.abs(change).toFixed(2)} €
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{
+            flexShrink: 0, height: "50dvh",
+            background: "#1a1208", display: "flex", flexDirection: "column",
+            borderTop: "2px solid rgba(245,200,66,0.25)",
+          }}>
+            <div style={{ display: "flex", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              {TABS.map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)} style={{
+                  flex: 1, padding: "9px 4px", border: "none", cursor: "pointer",
+                  fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", background: "transparent",
+                  color: tab === t.key ? "#f5c842" : "#5a5040",
+                  borderBottom: tab === t.key ? "2px solid #f5c842" : "2px solid transparent",
+                }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{
+              flex: 1, overflowY: "auto", padding: "8px",
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 7, alignContent: "start",
+            }}>
+              {currentItems.map(item => (
+                <button key={item.id} onClick={() => addToCart(item)} style={{
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)",
+                  borderRadius: 10, color: "#f0ead6", padding: "8px 4px",
+                  cursor: "pointer", textAlign: "center",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                }}>
+                  <span style={{ fontSize: 20 }}>{item.emoji}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.2 }}>{item.name}</span>
+                  <span style={{ fontSize: 10, color: "#5a5040" }}>{item.size}</span>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: "#f5c842", marginTop: 2 }}>
+                    {item.price.toFixed(2)} €
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<FestKasse />);
+  </script>
+</body>
+</html>
